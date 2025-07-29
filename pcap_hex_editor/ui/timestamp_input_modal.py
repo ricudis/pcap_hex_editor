@@ -3,8 +3,9 @@ from textual.containers import Vertical, Horizontal
 from textual.widgets import Static, Button, Input
 from textual.binding import Binding
 from textual import events
+from textual.screen import ModalScreen
 
-class TimestampInputModal(Screen):
+class TimestampInputModal(ModalScreen):
     """Modal input dialog for editing packet timestamps."""
 
     BINDINGS = [

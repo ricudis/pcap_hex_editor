@@ -111,7 +111,7 @@ class PcapHexEditorApp(App):
         background: blue;
     }
     HelpOverlay {
-        background: rgba(0, 0, 0, 0.8);
+        background: transparent;
     }
     #help-overlay {
         width: 1fr;
@@ -121,7 +121,7 @@ class PcapHexEditorApp(App):
     #help-modal {
         width: 80%;
         height: 80%;
-        background: $surface;
+        background: transparent;
         border: double $accent;
         padding: 2;
     }
@@ -142,13 +142,13 @@ class PcapHexEditorApp(App):
         width: 1fr;
         height: 1fr;
         align: center middle;
-        background: rgba(0, 0, 0, 0.8);
+        background: transparent;
     }
     
     #timestamp-modal {
         width: 60%;
         height: auto;
-        background: $surface;
+        background: transparent;
         border: double $accent;
         padding: 2;
     }
