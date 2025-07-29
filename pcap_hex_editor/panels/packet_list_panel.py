@@ -24,7 +24,8 @@ class PacketListPanel(FocusablePanel):
 
     def on_focus(self, event: events.Focus) -> None:
         super().on_focus(event)
-        self.list_view.focus()
+        # Don't focus the list_view so the panel can handle keys
+        # self.list_view.focus()
         # Update border title to show helpful keystrokes
         self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page, a: add packet, t: edit timestamp)"
         self.refresh()
@@ -70,16 +71,7 @@ class PacketListPanel(FocusablePanel):
     def compose(self) -> ComposeResult:
         yield self.list_view
 
-    def on_list_view_key(self, event: events.Key) -> None:
-        """Handle key events from the ListView."""
-        if event.key == "t":
-            # Edit timestamp
-            self.edit_timestamp()
-            event.prevent_default()
-        elif event.key == "a":
-            # Add new packet
-            self.add_new_packet()
-            event.prevent_default()
+
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         # Get the index from the list view's current index
@@ -92,7 +84,15 @@ class PacketListPanel(FocusablePanel):
 
         # Calculate page size based on visible area
         page_size = max(1, self.size.height - 3)
-        if event.key == "page_up":
+        if event.key == "up":
+            # Move selected packet up
+            new_index = self.validate_index(self.selected_index - 1)
+            self.select(new_index)
+        elif event.key == "down":
+            # Move selected packet down
+            new_index = self.validate_index(self.selected_index + 1)
+            self.select(new_index)
+        elif event.key == "page_up":
             # Move selected packet up by page size
             new_index = self.validate_index(self.selected_index - page_size)
             self.select(new_index)
@@ -100,6 +100,14 @@ class PacketListPanel(FocusablePanel):
             # Move selected packet down by page size
             new_index = self.validate_index(self.selected_index + page_size)
             self.select(new_index)
+        elif event.key == "a":
+            # Add new packet
+            self.add_new_packet()
+            event.prevent_default()
+        elif event.key == "t":
+            # Edit timestamp
+            self.edit_timestamp()
+            event.prevent_default()
 
     def add_new_packet(self):
         """Add a new packet with Ethernet, IPv4, and UDP layers after the currently selected packet."""
