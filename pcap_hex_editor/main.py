@@ -153,7 +153,7 @@ class PcapHexEditorApp(App):
         self.save_filename = f"edited_{self.pcap_filename}"
 
     def compose(self) -> ComposeResult:
-        self.packet_list_panel = PacketListPanel("Packet List", self.on_packet_select, id="panel-list")
+        self.packet_list_panel = PacketListPanel("Packet List", self.on_packet_select, self.on_packet_add, id="panel-list")
         self.hex_editor_panel = HexEditorPanel("Hex View", on_edit_callback=self.on_hex_edit, id="panel-hex")
         self.scapy_command_panel = ScapyCommandPanel("Edit Scapy Command", on_edit_callback=self.on_command_edit, id="panel-command")
         self.dissection_panel = DissectionPanel("Dissection", id="panel-dissect")
@@ -207,6 +207,16 @@ class PcapHexEditorApp(App):
         self.hex_editor_panel.set_packet(pkt)
         self.dissection_panel.set_packet(pkt)
         self.scapy_command_panel.set_packet(pkt)
+
+    def on_packet_add(self, index, new_packet):
+        """Handle new packet addition."""
+        self.selected_index = index
+        self.status_message = f"Added new packet at index {index}"
+        # Update all panels with the new packet
+        self.hex_editor_panel.set_packet(new_packet)
+        self.dissection_panel.set_packet(new_packet)
+        self.scapy_command_panel.set_packet(new_packet)
+        self.refresh()
 
     def on_hex_edit(self, new_bytes):
         self.log(f"on_hex_edit: {new_bytes}")

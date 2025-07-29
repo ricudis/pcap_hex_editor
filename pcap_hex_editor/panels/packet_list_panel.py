@@ -4,18 +4,20 @@ from textual.reactive import reactive
 from textual import events
 import datetime
 from .focusable_panel import FocusablePanel
+from scapy.all import Ether, IP, UDP, Raw
 
 class PacketListPanel(FocusablePanel):
     """Panel to display and select packets."""
     packets = reactive([])
     selected_index = reactive(0)
 
-    def __init__(self, title, on_select_callback=None, *args, **kwargs):
+    def __init__(self, title, on_select_callback=None, on_packet_add_callback=None, *args, **kwargs):
         kwargs.setdefault('id', 'panel-list')
         super().__init__(*args, **kwargs)
         self.list_view = ListView()
         self.packets = []
         self.on_select_callback = on_select_callback
+        self.on_packet_add_callback = on_packet_add_callback
         self.original_title = title
         self.border_title = title
 
@@ -23,7 +25,7 @@ class PacketListPanel(FocusablePanel):
         super().on_focus(event)
         self.list_view.focus()
         # Update border title to show helpful keystrokes
-        self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page)"
+        self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page, a: add packet)"
         self.refresh()
 
     def on_blur(self, event: events.Blur) -> None:
@@ -86,3 +88,40 @@ class PacketListPanel(FocusablePanel):
             # Move selected packet down by page size
             new_index = self.validate_index(self.selected_index + page_size)
             self.select(new_index)
+        elif event.key == "a":
+            # Add new packet
+            self.add_new_packet()
+
+    def add_new_packet(self):
+        """Add a new packet with Ethernet, IPv4, and UDP layers after the currently selected packet."""
+        if not self.packets:
+            return
+        
+        # Generate new packet with default layers
+        new_packet = Ether() / IP() / UDP() / Raw(load=b"New packet data")
+        
+        # Calculate timestamp as middle value between current and next packet
+        current_ts = getattr(self.packets[self.selected_index], 'time', 0)
+        
+        if self.selected_index < len(self.packets) - 1:
+            # There's a next packet, calculate middle timestamp
+            next_ts = getattr(self.packets[self.selected_index + 1], 'time', current_ts + 1)
+            new_ts = (current_ts + next_ts) / 2
+        else:
+            # This is the last packet, add 1 second to current timestamp
+            new_ts = current_ts + 1
+        
+        # Set the timestamp on the new packet
+        new_packet.time = new_ts
+        
+        # Insert the new packet after the currently selected packet
+        insert_index = self.selected_index + 1
+        self.packets.insert(insert_index, new_packet)
+        
+        # Call the callback to notify the main app about the new packet
+        if self.on_packet_add_callback:
+            self.on_packet_add_callback(insert_index, new_packet)
+        
+        # Update the display and select the new packet
+        self.set_packets(self.packets)
+        self.select(insert_index)
