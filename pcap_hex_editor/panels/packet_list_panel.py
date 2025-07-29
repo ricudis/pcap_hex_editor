@@ -5,6 +5,7 @@ from textual import events
 import datetime
 from .focusable_panel import FocusablePanel
 from scapy.all import Ether, IP, UDP, Raw
+from ..ui import TimestampInputModal
 
 class PacketListPanel(FocusablePanel):
     """Panel to display and select packets."""
@@ -24,8 +25,7 @@ class PacketListPanel(FocusablePanel):
 
     def on_focus(self, event: events.Focus) -> None:
         super().on_focus(event)
-        # Don't focus the list_view so the panel can handle keys
-        # self.list_view.focus()
+        self.list_view.focus()
         # Update border title to show helpful keystrokes
         self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page, a: add packet, t: edit timestamp)"
         self.refresh()
@@ -71,8 +71,6 @@ class PacketListPanel(FocusablePanel):
     def compose(self) -> ComposeResult:
         yield self.list_view
 
-
-
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         # Get the index from the list view's current index
         index = self.list_view.index
@@ -82,25 +80,7 @@ class PacketListPanel(FocusablePanel):
         if not self.packets:
             return
 
-        # Calculate page size based on visible area
-        page_size = max(1, self.size.height - 3)
-        if event.key == "up":
-            # Move selected packet up
-            new_index = self.validate_index(self.selected_index - 1)
-            self.select(new_index)
-        elif event.key == "down":
-            # Move selected packet down
-            new_index = self.validate_index(self.selected_index + 1)
-            self.select(new_index)
-        elif event.key == "page_up":
-            # Move selected packet up by page size
-            new_index = self.validate_index(self.selected_index - page_size)
-            self.select(new_index)
-        elif event.key == "page_down":
-            # Move selected packet down by page size
-            new_index = self.validate_index(self.selected_index + page_size)
-            self.select(new_index)
-        elif event.key == "a":
+        if event.key == "a":
             # Add new packet
             self.add_new_packet()
             event.prevent_default()
@@ -113,7 +93,7 @@ class PacketListPanel(FocusablePanel):
         """Add a new packet with Ethernet, IPv4, and UDP layers after the currently selected packet."""
         if not self.packets:
             return
-        
+        self.log(f"Adding new packet at index {self.selected_index}")
         # Generate new packet with default layers
         new_packet = Ether() / IP() / UDP() / Raw(load=b"New packet data")
         
@@ -144,10 +124,12 @@ class PacketListPanel(FocusablePanel):
         self.select(insert_index)
 
     def edit_timestamp(self):
-        """Edit the timestamp of the currently selected packet."""
+        """Edit the timestamp of the currently selected packet using a modal dialog."""
         if not self.packets or self.selected_index >= len(self.packets):
             return
         
+        self.log(f"Editing timestamp for packet at index {self.selected_index}")
+
         current_packet = self.packets[self.selected_index]
         current_ts = getattr(current_packet, 'time', 0)
         
@@ -157,6 +139,20 @@ class PacketListPanel(FocusablePanel):
         except Exception:
             current_ts_formatted = str(current_ts)
         
-        # Call the callback to handle timestamp editing
+        # Create and show the timestamp input modal
+        modal = TimestampInputModal(
+            current_timestamp=current_ts_formatted,
+            on_accept_callback=self._on_timestamp_accept,
+            on_cancel_callback=self._on_timestamp_cancel
+        )
+        self.app.push_screen(modal)
+
+    def _on_timestamp_accept(self, new_timestamp):
+        """Handle timestamp acceptance from modal."""
         if self.on_timestamp_edit_callback:
-            self.on_timestamp_edit_callback(self.selected_index, current_ts_formatted)
+            self.on_timestamp_edit_callback(self.selected_index, new_timestamp)
+
+    def _on_timestamp_cancel(self):
+        """Handle timestamp editing cancellation."""
+        # No action needed for cancellation
+        pass
