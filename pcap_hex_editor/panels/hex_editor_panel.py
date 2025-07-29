@@ -68,7 +68,7 @@ class HexEditorPanel(FocusablePanel):
         display_hex = self.working_hex_str if self.working_hex_str else self.hex_str
         if not display_hex:
             return "Empty packet."
-        
+
         # Convert hex string back to bytes for display
         try:
             raw_bytes = binascii.unhexlify(display_hex)

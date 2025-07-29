@@ -11,13 +11,14 @@ class PacketListPanel(FocusablePanel):
     packets = reactive([])
     selected_index = reactive(0)
 
-    def __init__(self, title, on_select_callback=None, on_packet_add_callback=None, *args, **kwargs):
+    def __init__(self, title, on_select_callback=None, on_packet_add_callback=None, on_timestamp_edit_callback=None, *args, **kwargs):
         kwargs.setdefault('id', 'panel-list')
         super().__init__(*args, **kwargs)
         self.list_view = ListView()
         self.packets = []
         self.on_select_callback = on_select_callback
         self.on_packet_add_callback = on_packet_add_callback
+        self.on_timestamp_edit_callback = on_timestamp_edit_callback
         self.original_title = title
         self.border_title = title
 
@@ -25,7 +26,7 @@ class PacketListPanel(FocusablePanel):
         super().on_focus(event)
         self.list_view.focus()
         # Update border title to show helpful keystrokes
-        self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page, a: add packet)"
+        self.border_title = f"{self.original_title} (↑↓: move, pgup/pgdn: move page, a: add packet, t: edit timestamp)"
         self.refresh()
 
     def on_blur(self, event: events.Blur) -> None:
@@ -91,6 +92,9 @@ class PacketListPanel(FocusablePanel):
         elif event.key == "a":
             # Add new packet
             self.add_new_packet()
+        elif event.key == "t":
+            # Edit timestamp
+            self.edit_timestamp()
 
     def add_new_packet(self):
         """Add a new packet with Ethernet, IPv4, and UDP layers after the currently selected packet."""
@@ -125,3 +129,21 @@ class PacketListPanel(FocusablePanel):
         # Update the display and select the new packet
         self.set_packets(self.packets)
         self.select(insert_index)
+
+    def edit_timestamp(self):
+        """Edit the timestamp of the currently selected packet."""
+        if not self.packets or self.selected_index >= len(self.packets):
+            return
+        
+        current_packet = self.packets[self.selected_index]
+        current_ts = getattr(current_packet, 'time', 0)
+        
+        # Format current timestamp for display
+        try:
+            current_ts_formatted = f"{current_ts:.6f}"
+        except Exception:
+            current_ts_formatted = str(current_ts)
+        
+        # Call the callback to handle timestamp editing
+        if self.on_timestamp_edit_callback:
+            self.on_timestamp_edit_callback(self.selected_index, current_ts_formatted)

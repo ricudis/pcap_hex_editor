@@ -151,9 +151,13 @@ class PcapHexEditorApp(App):
         self.selected_index = 0
         self.status_message = ""
         self.save_filename = f"edited_{self.pcap_filename}"
+        self.timestamp_editing = False
+        self.timestamp_edit_index = None
+        self.timestamp_edit_current = ""
+        self.timestamp_input_buffer = ""
 
     def compose(self) -> ComposeResult:
-        self.packet_list_panel = PacketListPanel("Packet List", self.on_packet_select, self.on_packet_add, id="panel-list")
+        self.packet_list_panel = PacketListPanel("Packet List", self.on_packet_select, self.on_packet_add, self.on_timestamp_edit, id="panel-list")
         self.hex_editor_panel = HexEditorPanel("Hex View", on_edit_callback=self.on_hex_edit, id="panel-hex")
         self.scapy_command_panel = ScapyCommandPanel("Edit Scapy Command", on_edit_callback=self.on_command_edit, id="panel-command")
         self.dissection_panel = DissectionPanel("Dissection", id="panel-dissect")
@@ -216,6 +220,16 @@ class PcapHexEditorApp(App):
         self.hex_editor_panel.set_packet(new_packet)
         self.dissection_panel.set_packet(new_packet)
         self.scapy_command_panel.set_packet(new_packet)
+        self.refresh()
+
+    def on_timestamp_edit(self, index, current_timestamp):
+        """Handle timestamp editing for a packet."""
+        self.selected_index = index
+        self.status_message = f"Enter new timestamp (current: {current_timestamp}): "
+        # Store the current state for timestamp editing
+        self.timestamp_editing = True
+        self.timestamp_edit_index = index
+        self.timestamp_edit_current = current_timestamp
         self.refresh()
 
     def on_hex_edit(self, new_bytes):
@@ -284,6 +298,66 @@ class PcapHexEditorApp(App):
             self.status_message = f"Saved to {self.save_filename}"
         except Exception as e:
             self.status_message = f"Save failed: {e}"
+        self.refresh()
+
+    def on_key(self, event: events.Key) -> None:
+        """Handle global key events."""
+        if self.timestamp_editing:
+            if event.key == "enter":
+                # Process the timestamp input
+                self.process_timestamp_input()
+            elif event.key == "escape":
+                # Cancel timestamp editing
+                self.cancel_timestamp_edit()
+            elif event.key in "0123456789.":
+                # Add character to input buffer
+                self.timestamp_input_buffer += event.key
+                self.status_message = f"Enter new timestamp (current: {self.timestamp_edit_current}): {self.timestamp_input_buffer}"
+                self.refresh()
+            elif event.key == "backspace":
+                # Remove last character from input buffer
+                if self.timestamp_input_buffer:
+                    self.timestamp_input_buffer = self.timestamp_input_buffer[:-1]
+                    self.status_message = f"Enter new timestamp (current: {self.timestamp_edit_current}): {self.timestamp_input_buffer}"
+                    self.refresh()
+
+    def process_timestamp_input(self):
+        """Process the timestamp input and update the packet."""
+        try:
+            new_timestamp = float(self.timestamp_input_buffer)
+            
+            # Update the packet timestamp
+            if self.timestamp_edit_index is not None and self.timestamp_edit_index < len(self.packets):
+                self.packets[self.timestamp_edit_index].time = new_timestamp
+                
+                # Update all panels
+                self.packet_list_panel.set_packets(self.packets)
+                self.packet_list_panel.select(self.timestamp_edit_index)
+                self.on_packet_select(self.timestamp_edit_index)
+                
+                self.status_message = f"Timestamp updated to {new_timestamp}"
+            else:
+                self.status_message = "Invalid packet index"
+                
+        except ValueError:
+            self.status_message = "Invalid timestamp format. Use seconds.milliseconds (e.g., 1234567890.123456)"
+        except Exception as e:
+            self.status_message = f"Error updating timestamp: {e}"
+        
+        # Reset timestamp editing state
+        self.timestamp_editing = False
+        self.timestamp_edit_index = None
+        self.timestamp_edit_current = ""
+        self.timestamp_input_buffer = ""
+        self.refresh()
+
+    def cancel_timestamp_edit(self):
+        """Cancel timestamp editing."""
+        self.timestamp_editing = False
+        self.timestamp_edit_index = None
+        self.timestamp_edit_current = ""
+        self.timestamp_input_buffer = ""
+        self.status_message = "Timestamp editing cancelled"
         self.refresh()
 
 def main():
