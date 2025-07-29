@@ -70,6 +70,17 @@ class PacketListPanel(FocusablePanel):
     def compose(self) -> ComposeResult:
         yield self.list_view
 
+    def on_list_view_key(self, event: events.Key) -> None:
+        """Handle key events from the ListView."""
+        if event.key == "t":
+            # Edit timestamp
+            self.edit_timestamp()
+            event.prevent_default()
+        elif event.key == "a":
+            # Add new packet
+            self.add_new_packet()
+            event.prevent_default()
+
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         # Get the index from the list view's current index
         index = self.list_view.index
@@ -89,12 +100,6 @@ class PacketListPanel(FocusablePanel):
             # Move selected packet down by page size
             new_index = self.validate_index(self.selected_index + page_size)
             self.select(new_index)
-        elif event.key == "a":
-            # Add new packet
-            self.add_new_packet()
-        elif event.key == "t":
-            # Edit timestamp
-            self.edit_timestamp()
 
     def add_new_packet(self):
         """Add a new packet with Ethernet, IPv4, and UDP layers after the currently selected packet."""
