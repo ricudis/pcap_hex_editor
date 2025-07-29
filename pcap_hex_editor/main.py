@@ -176,7 +176,7 @@ class PcapHexEditorApp(App):
     
     #modal-buttons {
         height: auto;
-        align: center;
+        align: center middle;
     }
     
     #modal-buttons Button {
