@@ -9,6 +9,5 @@ __version__ = "1.0.0"
 __author__ = "Christos Rikoudis <ricudis.christos@gmail.com>"
 __description__ = "A PCAP Hex Editor with Textual UI"
 
-from .main import PcapHexEditorApp
-
+# Define what should be available when importing the package
 __all__ = ["PcapHexEditorApp"] 
